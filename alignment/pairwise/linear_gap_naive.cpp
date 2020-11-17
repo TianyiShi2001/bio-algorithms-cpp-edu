@@ -4,11 +4,12 @@
 
 using namespace std;
 
-enum Operation {
-    Match = 1,
-    Mismatch = 2,
-    Insert = 3,
-    Delete = 4,
+enum class Operation {
+    Origin,
+    Match,
+    Mismatch,
+    Insert,
+    Delete,
 };
 
 struct AlignmentResult {
@@ -16,15 +17,16 @@ struct AlignmentResult {
     int score;
 };
 
+template <class T>
 class Matrix {
-    vector<int> inner;
+    vector<T> inner;
     size_t m, n;
 public:
-    Matrix(size_t m, size_t n) : inner{ vector<int>(m * n, 0) }, m{ m }, n{ n } {};
-    int get(size_t i, size_t j) {
+    Matrix<T>(size_t m, size_t n, T val) : inner{ vector<T>(m * n, val) }, m{ m }, n{ n } {};
+    T get(size_t i, size_t j) {
         return inner[i * n + j];
     }
-    void set(size_t i, size_t j, int val) {
+    void set(size_t i, size_t j, T val) {
         inner[i * n + j] = val;
     }
 };
@@ -32,22 +34,22 @@ public:
 AlignmentResult align(const string& x, const string& y, int match, int mismatch, int gap) {
     auto m = x.size();
     auto n = y.size();
-    Matrix score(m + 1, n + 1);
-    Matrix traceback(m + 1, n + 1);
+    Matrix<int> score(m + 1, n + 1, 0);
+    Matrix<Operation> traceback(m + 1, n + 1, Operation::Origin);
 
     int t = 0;
     for (int j = 1; j <= n; j++)
     {
         t += gap;
         score.set(0, j, t);
-        traceback.set(0, j, Insert);
+        traceback.set(0, j, Operation::Insert);
     }
     t = 0;
     for (int i = 1; i <= m; i++)
     {
         t += gap;
         score.set(i, 0, t);
-        traceback.set(i, 0, Delete);
+        traceback.set(i, 0, Operation::Delete);
     }
     char p, q;
     int s, tmp;
@@ -59,16 +61,16 @@ AlignmentResult align(const string& x, const string& y, int match, int mismatch,
         {
             q = y[j - 1];
             s = score.get(i - 1, j - 1) + (p == q ? match : mismatch);
-            op = p == q ? Match : Mismatch;
+            op = p == q ? Operation::Match : Operation::Mismatch;
             tmp = score.get(i - 1, j) + gap;
             if (tmp > s) {
                 s = tmp;
-                op = Delete;
+                op = Operation::Delete;
             }
             tmp = score.get(i, j - 1) + gap;
             if (tmp > s) {
                 s = tmp;
-                op = Insert;
+                op = Operation::Insert;
             }
             score.set(i, j, s);
             traceback.set(i, j, op);
@@ -80,22 +82,22 @@ AlignmentResult align(const string& x, const string& y, int match, int mismatch,
     int j = n;
     while (true)
     {
-        auto op = (Operation)traceback.get(i, j);
-        if (op == 0) {
+        auto op = traceback.get(i, j);
+        if (op == Operation::Origin) {
             break;
         }
         operations.push_back(op);
         switch (op)
         {
-        case Match:
-        case Mismatch:
+        case Operation::Match:
+        case Operation::Mismatch:
             i--;
             j--;
             break;
-        case Insert:
+        case Operation::Insert:
             j--;
             break;
-        case Delete:
+        case Operation::Delete:
             i--;
             break;
         default:
@@ -129,6 +131,7 @@ void print_result(AlignmentResult& res, string& x, string& y) {
             xf.push_back('-');
             yf.push_back(y[j]);
             j++;
+            break;
         case Operation::Delete:
             xf.push_back(x[i]);
             yf.push_back('-');
